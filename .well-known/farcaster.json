@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjE3NjUyLCJ0eXBlIjoiY3VzdG9keSIsImtleSI6IjB4RGM1QmU0Mjg2MEZBRDQ3MTFlQTQ5Nzk4QzE2RDRmMjgwQUMxMzZGMyJ9",
+    "payload": "eyJkb21haW4iOiJhcmItbmZ0LnZlcmNlbC5hcHAifQ",
+    "signature": "MHg5ODEyZTVhZGRkN2FjMmI4OWY2MmE2NjBhODgyZjhiYmRiZWY4ZTVmODkyMjUxZWY5ZDhjMDAyNzFlNzRiMjIyNjQxNDkxMjI2M2U3MWVmMjJjYmJjZDg2M2ZmOTdlYzNiYmI0YjJlNTgwYmM5NGU0YzI0NWFhNzNkMzVjNTllOTFj"
+  },
+  "frame": {
+    "version": "1",
+    "name": "Arbitrum Frame",
+    "iconUrl": "https://arb-nft.vercel.app/icon.png",
+    "homeUrl": "https://arb-nft.vercel.app",
+    "imageUrl": "https://arb-nft.vercel.app/image.png",
+    "buttonTitle": "Mint Free Nft",
+    "splashImageUrl": "https://arb-nft.vercel.app/splash.png",
+    "splashBackgroundColor": "#eeccff",
+    "webhookUrl": "https://arb-nft.vercel.app/api/webhook"
+  }
+}
