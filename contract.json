@@ -1,0 +1,14 @@
+{
+  "address": "0xf5766771a46766a27d28cb3427e4c27881d48360",
+  "abi": [
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "quantity", "type": "uint256" }
+      ],
+      "name": "mint",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}
