@@ -70,64 +70,44 @@
     </footer>
   </div>
 
-  <!-- Farcaster SDK -->
+  <!-- Farcaster Mini App SDK -->
   <script type="module">
     import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
     sdk.actions.ready({ disableNativeGestures: true });
   </script>
 
-  <!-- Wagmi Mint Logic -->
+  <!-- Direct viem Mint Logic -->
   <script type="module">
-    import {
-      createConfig,
-      http,
-      connect,
-      getWalletClient,
-      writeContract,
-      injected
-    } from 'https://esm.sh/@wagmi/core';
+    import { createWalletClient, custom, parseEther } from 'https://esm.sh/viem';
     import { base } from 'https://esm.sh/@wagmi/core/chains';
-    import { farcasterMiniApp } from 'https://esm.sh/@farcaster/miniapp-wagmi-connector';
-    import { parseEther } from 'https://esm.sh/viem';
-
-    const config = createConfig({
-      chains: [base],
-      transports: {
-        [base.id]: http(),
-      },
-    });
-
-    let connected = false;
-    let connector;
 
     document.querySelector('.mint-button')?.addEventListener('click', async () => {
       try {
-        const isFarcaster = window?.ethereum?.isFarcaster;
-        connector = isFarcaster ? farcasterMiniApp() : injected();
+        const provider = window.ethereum;
 
-        if (!connected) {
-          await connect(config, { connector });
-          connected = true;
+        if (!provider?.isFarcaster) {
+          throw new Error('Farcaster wallet not detected. Please open in Warpcast.');
         }
 
-        const walletClient = await connector.getWalletClient({ chainId: base.id });
-        if (!walletClient) throw new Error('Wallet client not returned.');
+        const client = createWalletClient({
+          chain: base,
+          transport: custom(provider)
+        });
 
         const { address, abi } = await fetch('/contract.json').then(r => r.json());
 
-        const tx = await writeContract(config, {
+        const hash = await client.writeContract({
           address,
           abi,
           functionName: 'mint',
           args: [1],
-          value: parseEther('0'),
-          account: walletClient.account
+          value: parseEther('0')
         });
 
-        alert('✅ Mint sent!');
+        alert('✅ Mint tx sent!\nTx Hash: ' + hash);
       } catch (err) {
-        console.error('❌ Mint error:', err);
-        alert('Mint failed: ' + err.message);
+        console.error(err);
+        alert('❌ Mint failed: ' + err.message);
       }
     });
   </script>
