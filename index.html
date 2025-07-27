@@ -70,44 +70,49 @@
     </a>
   </footer>
 
-  <!-- Farcaster Mini App SDK -->
+  <!-- Farcaster SDK -->
   <script type="module">
     import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
     sdk.actions.ready({ disableNativeGestures: true });
   </script>
 
-  <!-- Wallet + Mint Logic -->
+  <!-- Wallet & Mint -->
   <script type="module">
-    import { createWalletClient, custom, parseEther } from 'https://esm.sh/viem';
+    import {
+      createConfig,
+      connect,
+      writeContract,
+      http
+    } from 'https://esm.sh/@wagmi/core';
+
     import { base } from 'https://esm.sh/@wagmi/core/chains';
+    import { farcasterMiniApp } from 'https://esm.sh/@farcaster/miniapp-wagmi-connector';
+    import { parseEther } from 'https://esm.sh/viem';
 
-    document.querySelector('.mint-button')?.addEventListener('click', async () => {
-      const provider = window.ethereum;
-
-      // Debug logs
-      console.log('🌐 window.ethereum:', provider);
-      console.log('🧪 isFarcaster:', provider?.isFarcaster);
-      console.log('📦 provider methods:', provider?.request ? '✅ present' : '❌ missing');
-
-      if (!provider) {
-        alert('❌ No Ethereum provider detected.\nAre you inside Warpcast?');
-        return;
+    const config = createConfig({
+      chains: [base],
+      transports: {
+        [base.id]: http()
       }
+    });
 
-      if (!provider.request) {
-        alert('❌ Wallet does not support requests');
-        return;
-      }
+    let connector;
+    try {
+      const result = await connect(config, {
+        connector: farcasterMiniApp()
+      });
+      connector = result.connector;
+      console.log('✅ Connected via Farcaster MiniApp');
+    } catch (e) {
+      console.error('❌ Farcaster connect failed', e);
+      alert('Farcaster wallet not found. Are you in Warpcast?');
+    }
 
+    document.querySelector('.mint-button').addEventListener('click', async () => {
       try {
-        const client = createWalletClient({
-          chain: base,
-          transport: custom(provider)
-        });
-
         const { address, abi } = await fetch('/contract.json').then(r => r.json());
 
-        const hash = await client.writeContract({
+        const hash = await writeContract(config, {
           address,
           abi,
           functionName: 'mint',
@@ -115,10 +120,10 @@
           value: parseEther('0')
         });
 
-        alert('✅ Mint successful!\nTx Hash: ' + hash);
-      } catch (err) {
-        console.error('❌ Mint Error:', err);
-        alert('❌ Mint failed:\n' + err.message);
+        alert(`✅ Mint successful!\nTx: ${hash}`);
+      } catch (e) {
+        console.error(e);
+        alert('❌ Mint failed: ' + e.message);
       }
     });
   </script>
