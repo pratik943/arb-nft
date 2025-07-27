@@ -186,9 +186,9 @@
       }
     });
 
-    // Load metadata preview from manifest.json
+    // Load metadata preview from farcaster.json
     try {
-      const manifest = await fetch('/manifest.json').then(res => res.json());
+      const manifest = await fetch('/farcaster.json').then(res => res.json());
       document.getElementById('app-name').textContent = manifest.frame.name;
       document.getElementById('app-image').src = manifest.frame.imageUrl;
     } catch (err) {
