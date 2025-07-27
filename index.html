@@ -76,19 +76,23 @@
     sdk.actions.ready({ disableNativeGestures: true });
   </script>
 
-  <!-- Direct viem Mint Logic -->
+  <!-- Mint Logic with Debug -->
   <script type="module">
     import { createWalletClient, custom, parseEther } from 'https://esm.sh/viem';
     import { base } from 'https://esm.sh/@wagmi/core/chains';
 
     document.querySelector('.mint-button')?.addEventListener('click', async () => {
+      const provider = window.ethereum;
+
+      console.log('🧪 Debug :: window.ethereum:', provider);
+      console.log('🧪 Debug :: isFarcaster:', provider?.isFarcaster);
+
+      if (!provider || !provider.isFarcaster) {
+        alert('❌ Mint failed: Farcaster wallet not detected. Please open in Warpcast.');
+        return;
+      }
+
       try {
-        const provider = window.ethereum;
-
-        if (!provider?.isFarcaster) {
-          throw new Error('Farcaster wallet not detected. Please open in Warpcast.');
-        }
-
         const client = createWalletClient({
           chain: base,
           transport: custom(provider)
@@ -104,7 +108,7 @@
           value: parseEther('0')
         });
 
-        alert('✅ Mint tx sent!\nTx Hash: ' + hash);
+        alert('✅ Mint tx sent!\nHash: ' + hash);
       } catch (err) {
         console.error(err);
         alert('❌ Mint failed: ' + err.message);
