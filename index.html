@@ -36,11 +36,11 @@
       box-sizing: border-box;
     }
 
-    /* TradingView chart */
+    /* TradingView chart container, now 200px high */
     .tradingview-widget-container {
       width: 100%;
       max-width: 390px;
-      height: 260px;
+      height: 200px;
       border: 1px solid #333;
       border-radius: 12px;
       overflow: hidden;
@@ -116,7 +116,7 @@
 </head>
 <body>
 
-  <!-- 1. Live ARBUSD chart -->
+  <!-- 1. Live ARBUSD chart (200px high, minimal toolbar) -->
   <div class="tradingview-widget-container">
     <div id="arb-chart"></div>
     <script src="https://s3.tradingview.com/tv.js"></script>
@@ -125,11 +125,11 @@
         autosize: true,
         symbol: "ARBUSD",
         interval: "60",
-        timezone: "Etc/UTC",
         theme: "dark",
-        style: "1",
-        locale: "en",
+        hide_top_toolbar: true,
+        withdateranges: false,
         toolbar_bg: "#1f1f1f",
+        locale: "en",
         enable_publishing: false,
         allow_symbol_change: false,
         container_id: "arb-chart"
@@ -137,7 +137,7 @@
     </script>
   </div>
 
-  <!-- 2. Total Minted -->
+  <!-- 2. Total Minted placeholder -->
   <div id="totalSupply" class="status-box status-warning">
     Loading total minted…
   </div>
@@ -175,17 +175,16 @@
       createConfig,
       connect,
       writeContract,
-      http,
-      readContract
+      http
     } from 'https://esm.sh/@wagmi/core';
     import { arbitrum } from 'https://esm.sh/@wagmi/core/chains';
     import { farcasterMiniApp } from 'https://esm.sh/@farcaster/miniapp-wagmi-connector';
     import { parseEther } from 'https://esm.sh/viem';
 
     const statusBox = document.getElementById('statusBox');
-    const supplyBox = document.getElementById('totalSupply');
+    const supplyBox  = document.getElementById('totalSupply');
 
-    function setStatus(message, type = 'info') {
+    function setStatus(message, type='info') {
       statusBox.className = `status-box status-${type}`;
       statusBox.innerHTML = message;
     }
@@ -195,50 +194,47 @@
       transports: { [arbitrum.id]: http() }
     });
 
+    // connect Farcaster wallet
     try {
-      const result = await connect(config, {
-        connector: farcasterMiniApp()
-      });
+      await connect(config, { connector: farcasterMiniApp() });
     } catch (e) {
       console.error('Farcaster connect failed', e);
     }
 
-    // Fetch and display totalSupply
-    try {
-      const { address, abi } = await fetch('/contract.json').then(r => r.json());
-      const total = await config.publicClient.readContract({
-        address,
-        abi,
-        functionName: 'totalSupply'
-      });
-      supplyBox.textContent = `Total Minted: ${total}`;
-    } catch (e) {
-      console.warn('Failed to fetch totalSupply:', e);
-    }
+    // fetch totalSupply in an async IIFE
+    (async () => {
+      try {
+        const { address, abi } = await fetch('/contract.json').then(r => r.json());
+        const total = await config.publicClient.readContract({
+          address, abi, functionName: 'totalSupply'
+        });
+        supplyBox.textContent = `Total Minted: ${total}`;
+      } catch (e) {
+        console.warn('Failed to fetch totalSupply:', e);
+      }
+    })();
 
+    // mint button handler
     document.querySelector('.mint-button').addEventListener('click', async () => {
-      const button = document.querySelector('.mint-button');
-      button.disabled = true;
-      button.innerText = 'Minting…';
-
+      const btn = document.querySelector('.mint-button');
+      btn.disabled = true;
+      btn.innerText = 'Minting…';
       try {
         const { address, abi } = await fetch('/contract.json').then(r => r.json());
         const hash = await writeContract(config, {
-          address,
-          abi,
+          address, abi,
           functionName: 'mint',
-          args: [],
-          value: parseEther('0')
+          args: [], value: parseEther('0')
         });
         setStatus(
-          `✅ Mint Successful <a style="color:#fff;text-decoration:underline" href="https://arbiscan.io/tx/${hash}" target="_blank">View Tx</a>`,
+          `✅ Mint Successful <a href="https://arbiscan.io/tx/${hash}" target="_blank" style="color:#fff;text-decoration:underline">View Tx</a>`,
           'success'
         );
       } catch (e) {
         console.warn('Mint rejected or failed', e);
       } finally {
-        button.disabled = false;
-        button.innerText = 'MINT ME';
+        btn.disabled = false;
+        btn.innerText = 'MINT ME';
       }
     });
   </script>
