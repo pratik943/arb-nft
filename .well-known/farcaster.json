@@ -12,7 +12,7 @@
     "imageUrl": "https://arb-nft.vercel.app/image.png",
     "buttonTitle": "Mint Free Nft",
     "splashImageUrl": "https://arb-nft.vercel.app/splash.png",
-    "splashBackgroundColor": "#eeccff",
+    "splashBackgroundColor": "#000000",
     "webhookUrl": "https://arb-nft.vercel.app/api/webhook"
   }
 }
