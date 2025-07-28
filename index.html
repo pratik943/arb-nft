@@ -42,6 +42,12 @@
       border: none;
       border-radius: 8px;
       cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .mint-button:disabled {
+      background-color: #888;
+      cursor: not-allowed;
     }
 
     footer {
@@ -76,13 +82,15 @@
     sdk.actions.ready({ disableNativeGestures: true });
   </script>
 
-  <!-- Wallet & Mint -->
+  <!-- Wallet & Mint Script -->
   <script type="module">
     import {
       createConfig,
       connect,
       writeContract,
-      http
+      http,
+      getGasPrice,
+      estimateGas
     } from 'https://esm.sh/@wagmi/core';
 
     import { arbitrum } from 'https://esm.sh/@wagmi/core/chains';
@@ -108,22 +116,57 @@
       alert('Farcaster wallet not found. Are you in Warpcast?');
     }
 
-    document.querySelector('.mint-button').addEventListener('click', async () => {
+    const button = document.querySelector('.mint-button');
+
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      button.innerText = 'Minting...';
+
       try {
         const { address, abi } = await fetch('/contract.json').then(r => r.json());
+        console.log('ℹ️ Using contract:', address);
+
+        let gasLimit;
+        try {
+          gasLimit = await estimateGas(config, {
+            address,
+            abi,
+            functionName: 'mint',
+            args: [],
+            value: parseEther('0'),
+            chainId: arbitrum.id
+          });
+          console.log('✅ Gas estimated:', gasLimit.toString());
+        } catch (e) {
+          console.warn('⚠️ Gas estimation failed. Using fallback.');
+          gasLimit = 300000n;
+        }
+
+        const gasPrice = await getGasPrice(config, { chainId: arbitrum.id });
+        console.log('⛽ Gas price:', gasPrice.toString());
 
         const hash = await writeContract(config, {
           address,
           abi,
           functionName: 'mint',
           args: [],
-          value: parseEther('0')
+          value: parseEther('0'),
+          chainId: arbitrum.id,
+          gas: gasLimit
         });
 
-        alert(`✅ Mint successful!\nTx: ${hash}`);
+        alert(`✅ Mint successful!\nView on Arbiscan: https://arbiscan.io/tx/${hash}`);
       } catch (e) {
-        console.error(e);
-        alert('❌ Mint failed: ' + e.message);
+        console.error('❌ Mint error:', e);
+
+        if (e.name === 'UserRejectedRequestError') {
+          alert('⚠️ You cancelled the transaction in your wallet. Please approve to mint.');
+        } else {
+          alert('❌ Mint failed: ' + e.message);
+        }
+      } finally {
+        button.disabled = false;
+        button.innerText = 'MINT ME';
       }
     });
   </script>
