@@ -83,7 +83,6 @@
       margin-bottom: 12px;
     }
     #shareBtn {
-      display: none;
       padding: 0.5rem 1rem;
       font-size: 1rem;
       color: white;
@@ -91,7 +90,7 @@
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      margin-top: 8px;
+      margin-bottom: 16px;
     }
     footer {
       margin-top: auto;
@@ -108,7 +107,7 @@
 </head>
 <body>
 
-  <!-- 1. Live ARBUSD chart -->
+  <!-- Live ARBUSD chart -->
   <div class="tradingview-widget-container">
     <div id="arb-chart"></div>
     <script src="https://s3.tradingview.com/tv.js"></script>
@@ -129,30 +128,28 @@
     </script>
   </div>
 
-  <!-- 2. Total Minted -->
+  <!-- Total Minted -->
   <div id="totalSupply" class="status-box status-warning">
     Loading total minted…
   </div>
 
-  <!-- 3. Preview of last minted -->
-  <img id="preview" src="" alt="Your NFT Preview" style="display:none" />
+  <!-- NFT preview -->
+  <img id="preview" alt="Your NFT Preview" />
 
-  <!-- 4. Mint UI -->
+  <!-- Mint UI -->
   <button class="mint-button">MINT ME</button>
   <div id="statusBox" class="status-box"></div>
 
-  <!-- 5. Share button -->
-  <button id="shareBtn">Share on Warpcast</button>
+  <!-- Share on Farcaster -->
+  <button id="shareBtn">Share on Farcaster</button>
 
   <!-- Footer -->
   <footer>
     <a href="https://farcaster.xyz/pratiksharma.eth" target="_blank" aria-label="Farcaster">
-      <!-- Farcaster icon SVG -->
-      <svg viewBox="0 0 24 24"><path fill="white" d="M18.24 0.24H5.76…"/></svg>
+      <svg viewBox="0 0 24 24"><path fill="white" d="M18.24 0.24H5.76C2.5789 0.24 0 2.8188 0 6v12c0 3.1811 2.5789 5.76 5.76 5.76h12.48c3.1812 0 5.76-2.5789 5.76-5.76V6C24 2.8188 21.4212 0.24 18.24 0.24m0.8155 17.1662v0.504c0.2868-0.0256 0.5458 0.1905 0.5439 0.479v0.5688h-5.1437v-0.5688c-0.0019-0.2885 0.2576-0.5047 0.5443-0.479v-0.504c0-0.22 0.1525-0.402 0.358-0.458l-0.0095-4.3645c-0.1589-1.7366-1.6402-3.0979-3.4435-3.0979-1.8038 0-3.2846 1.3613-3.4435 3.0979l-0.0096 4.3578c0.2276 0.0424 0.5318 0.2083 0.5395 0.4648v0.504c0.2863-0.0256 0.5457 0.1905 0.5438 0.479v0.5688H4.3915v-0.5688c-0.0019-0.2885 0.2575-0.5047 0.5438-0.479v-0.504c0-0.2529 0.2011-0.4548 0.4536-0.4724v-7.895h-0.4905L4.2898 7.008l2.6405-0.0005V5.0419h9.9495v1.9656h2.8219l-0.6091 2.0314h-0.4901v7.8949c0.2519 0.0177 0.453 0.2195 0.453 0.4724"/></svg>
     </a>
-    <a href="https://x.com/Pratiksharma95" target="_blank" aria-label="Twitter">
-      <!-- X (Twitter) icon SVG -->
-      <svg viewBox="0 0 24 24"><path fill="white" d="M1.5 0L9…"/></svg>
+    <a href="https://x.com/Pratiksharma95" target="_blank" aria-label="X">
+      <svg viewBox="0 0 24 24"><path fill="white" d="M1.5 0L9 10.125 1.575 24H6.15L12 14.4l5.85 9.6h4.575L15 10.05 22.425 0h-4.575L12 9.6 6.15 0H1.5Z"/></svg>
     </a>
   </footer>
 
@@ -180,7 +177,7 @@
     const preview    = document.getElementById('preview');
     const shareBtn   = document.getElementById('shareBtn');
 
-    function setStatus(msg, type = 'info') {
+    function setStatus(msg, type='info') {
       statusBox.className = `status-box status-${type}`;
       statusBox.innerHTML = msg;
     }
@@ -192,12 +189,12 @@
 
     let lastTokenId = null;
 
-    // 1) Connect + fetch totalSupply
+    // Initialize: connect & fetch totalSupply
     (async () => {
       try {
         await connect(config, { connector: farcasterMiniApp() });
         const { address, abi } = await fetch('/contract.json').then(r=>r.json());
-        const total = await readContract(config, {
+        const total = await readContract(config.publicClient, {
           address, abi, functionName: 'totalSupply'
         });
         supplyBox.textContent = `Total Minted: ${total}`;
@@ -207,17 +204,16 @@
       }
     })();
 
-    // 2) Mint handler
+    // Mint handler
     document.querySelector('.mint-button').addEventListener('click', async () => {
       const btn = document.querySelector('.mint-button');
       btn.disabled = true;
       btn.innerText = 'Minting…';
       preview.style.display = 'none';
-      shareBtn.style.display = 'none';
+
       try {
         const { address, abi } = await fetch('/contract.json').then(r=>r.json());
-        // mint
-        const hash = await writeContract(config, {
+        const hash = await writeContract(config.publicClient, {
           address, abi,
           functionName: 'mint',
           args: [], value: parseEther('0')
@@ -226,22 +222,16 @@
           `✅ Mint Successful <a href="https://arbiscan.io/tx/${hash}" target="_blank" style="color:#fff;text-decoration:underline">View Tx</a>`,
           'success'
         );
-        // fetch new total
-        const total = await readContract(config, {
+        const total = await readContract(config.publicClient, {
           address, abi, functionName: 'totalSupply'
         });
         supplyBox.textContent = `Total Minted: ${total}`;
-        // assume tokenId = total-1
         lastTokenId = BigInt(total) - 1n;
-        // fetch tokenURI
-        const uri = await readContract(config, {
+        const uri = await readContract(config.publicClient, {
           address, abi, functionName: 'tokenURI', args: [lastTokenId]
         });
-        // load preview image
         preview.src = uri;
         preview.style.display = 'block';
-        // show share button
-        shareBtn.style.display = 'inline-block';
       } catch (e) {
         console.warn('Mint failed:', e);
       } finally {
@@ -250,13 +240,13 @@
       }
     });
 
-    // 3) Share handler
+    // Share handler
     shareBtn.addEventListener('click', () => {
+      if (lastTokenId === null) return;
       const text = encodeURIComponent(
-        `Minted NFT #${lastTokenId} on Farcaster by @pratiksharma.eth 🎉\nhttps://arb-nft.vercel.app/`
+        `Minted NFT #${lastTokenId} on Farcaster by @pratiksharma.eth 🎉\nMint yours: https://arb-nft.vercel.app/`
       );
-      // external compose
-      sdk.actions.openUrl(`https://warpcast.com/compose?text=${text}`);
+      sdk.actions.openWindow({ url: `https://farcaster.xyz/compose?text=${text}` });
     });
   </script>
 </body>
