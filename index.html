@@ -25,18 +25,15 @@
     body {
       margin: 0;
       background: #111;
+      color: white;
       font-family: sans-serif;
       display: flex;
-      justify-content: center;
-      align-items: center;
       flex-direction: column;
+      align-items: center;
       min-height: 100vh;
-      color: white;
       padding: 16px 0;
       box-sizing: border-box;
     }
-
-    /* TradingView chart container, now 200px high */
     .tradingview-widget-container {
       width: 100%;
       max-width: 390px;
@@ -46,8 +43,6 @@
       overflow: hidden;
       margin-bottom: 16px;
     }
-
-    /* Total minted */
     .status-box {
       font-size: 1rem;
       padding: 8px 12px;
@@ -57,40 +52,29 @@
       max-width: 320px;
       margin-bottom: 12px;
     }
-    .status-warning {
-      background: #b45309;
-    }
-
-    /* Mint button */
+    .status-warning { background: #b45309; }
     .mint-button {
       padding: 1rem 2rem;
       font-size: 1.4rem;
       font-weight: bold;
       color: black;
-      background-color: white;
+      background: white;
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      transition: background 0.3s;
       margin-bottom: 12px;
     }
     .mint-button:disabled {
-      background-color: #888;
+      background: #888;
       cursor: not-allowed;
     }
-
-    /* Post-mint status */
     #statusBox {
       min-height: 24px;
       width: 90%;
       max-width: 320px;
       margin-bottom: 16px;
     }
-    .status-success {
-      background: #1d4ed8;
-    }
-
-    /* OpenSea gallery */
+    .status-success { background: #1d4ed8; }
     .opensea-embed {
       width: 100%;
       max-width: 390px;
@@ -99,8 +83,6 @@
       border-radius: 12px;
       margin-top: 16px;
     }
-
-    /* Footer */
     footer {
       margin-top: auto;
       display: flex;
@@ -116,7 +98,7 @@
 </head>
 <body>
 
-  <!-- 1. Live ARBUSD chart (200px high, minimal toolbar) -->
+  <!-- 1. Live ARBUSD chart -->
   <div class="tradingview-widget-container">
     <div id="arb-chart"></div>
     <script src="https://s3.tradingview.com/tv.js"></script>
@@ -137,14 +119,14 @@
     </script>
   </div>
 
-  <!-- 2. Total Minted placeholder -->
+  <!-- 2. Total Minted -->
   <div id="totalSupply" class="status-box status-warning">
     Loading total minted…
   </div>
 
   <!-- 3. Mint UI -->
   <button class="mint-button">MINT ME</button>
-  <div class="status-box" id="statusBox"></div>
+  <div id="statusBox" class="status-box"></div>
 
   <!-- 4. OpenSea FarArb gallery -->
   <iframe
@@ -182,9 +164,9 @@
     import { parseEther } from 'https://esm.sh/viem';
 
     const statusBox = document.getElementById('statusBox');
-    const supplyBox  = document.getElementById('totalSupply');
+    const supplyBox = document.getElementById('totalSupply');
 
-    function setStatus(message, type='info') {
+    function setStatus(message, type = 'info') {
       statusBox.className = `status-box status-${type}`;
       statusBox.innerHTML = message;
     }
@@ -194,27 +176,30 @@
       transports: { [arbitrum.id]: http() }
     });
 
-    // connect Farcaster wallet
+    // 1) Connect Farcaster wallet
     try {
       await connect(config, { connector: farcasterMiniApp() });
     } catch (e) {
       console.error('Farcaster connect failed', e);
     }
 
-    // fetch totalSupply in an async IIFE
+    // 2) Fetch totalSupply
     (async () => {
       try {
         const { address, abi } = await fetch('/contract.json').then(r => r.json());
         const total = await config.publicClient.readContract({
-          address, abi, functionName: 'totalSupply'
+          address,
+          abi,
+          functionName: 'totalSupply'
         });
         supplyBox.textContent = `Total Minted: ${total}`;
       } catch (e) {
-        console.warn('Failed to fetch totalSupply:', e);
+        console.warn('Failed fetching totalSupply:', e);
+        supplyBox.textContent = 'Total Minted: N/A';
       }
     })();
 
-    // mint button handler
+    // 3) Mint handler
     document.querySelector('.mint-button').addEventListener('click', async () => {
       const btn = document.querySelector('.mint-button');
       btn.disabled = true;
@@ -222,9 +207,11 @@
       try {
         const { address, abi } = await fetch('/contract.json').then(r => r.json());
         const hash = await writeContract(config, {
-          address, abi,
+          address,
+          abi,
           functionName: 'mint',
-          args: [], value: parseEther('0')
+          args: [],
+          value: parseEther('0')
         });
         setStatus(
           `✅ Mint Successful <a href="https://arbiscan.io/tx/${hash}" target="_blank" style="color:#fff;text-decoration:underline">View Tx</a>`,
