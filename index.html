@@ -90,9 +90,9 @@
     import { parseEther } from 'https://esm.sh/viem';
 
     const config = createConfig({
-      chains: [base],
+      chains: [arbitrum],
       transports: {
-        [base.id]: http()
+        [arbitrum.id]: http()
       }
     });
 
