@@ -25,7 +25,7 @@
     body {
       margin: 0;
       background: #111;
-      color: white;
+      color: #fff;
       font-family: sans-serif;
       display: flex;
       flex-direction: column;
@@ -34,68 +34,45 @@
       padding: 16px 0;
       box-sizing: border-box;
     }
-    .tradingview-widget-container {
-      width: 100%;
-      max-width: 390px;
-      height: 200px;
-      border: 1px solid #333;
-      border-radius: 12px;
-      overflow: hidden;
-      margin-bottom: 16px;
-    }
     .status-box {
-      font-size: 1rem;
-      padding: 8px 12px;
+      margin: 12px 0;
+      padding: 8px 16px;
       border-radius: 8px;
       text-align: center;
       width: 90%;
       max-width: 320px;
-      margin-bottom: 12px;
+      background: #b45309;
     }
-    .status-warning { background: #b45309; }
-    .mint-button {
-      padding: 1rem 2rem;
-      font-size: 1.4rem;
-      font-weight: bold;
-      color: black;
-      background: white;
+    .status-success { background: #1d4ed8; }
+    button {
+      font-size: 1.2rem;
+      padding: 0.8rem 1.6rem;
       border: none;
       border-radius: 8px;
       cursor: pointer;
+    }
+    .mint-button {
+      background: #fff;
+      color: #000;
       margin-bottom: 12px;
     }
     .mint-button:disabled {
-      background: #888;
+      background: #444;
       cursor: not-allowed;
     }
-    #statusBox {
-      min-height: 24px;
-      width: 90%;
-      max-width: 320px;
-      margin-bottom: 16px;
-    }
-    .status-success { background: #1d4ed8; }
-
-    /* share button always visible */
     #shareBtn {
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      color: white;
       background: #2563eb;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
+      color: #fff;
       margin-bottom: 16px;
     }
-
     footer {
       margin-top: auto;
-      display: flex;
-      gap: 24px;
       padding-bottom: 12px;
+      display: flex;
+      gap: 16px;
     }
     footer svg {
-      fill: white;
+      fill: #fff;
       width: 28px;
       height: 28px;
     }
@@ -103,48 +80,23 @@
 </head>
 <body>
 
-  <!-- 1. Live ARBUSD chart -->
-  <div class="tradingview-widget-container">
-    <div id="arb-chart"></div>
-    <script src="https://s3.tradingview.com/tv.js"></script>
-    <script>
-      new TradingView.widget({
-        autosize: true,
-        symbol: "ARBUSD",
-        interval: "60",
-        theme: "dark",
-        hide_top_toolbar: true,
-        withdateranges: false,
-        toolbar_bg: "#1f1f1f",
-        locale: "en",
-        enable_publishing: false,
-        allow_symbol_change: false,
-        container_id: "arb-chart"
-      });
-    </script>
-  </div>
+  <!-- 1. Total minted -->
+  <div id="totalSupply" class="status-box">Loading total minted…</div>
 
-  <!-- 2. Total Minted -->
-  <div id="totalSupply" class="status-box status-warning">
-    Loading total minted…
-  </div>
-
-  <!-- 3. Mint UI -->
+  <!-- 2. Mint -->
   <button class="mint-button">MINT ME</button>
-  <div id="statusBox" class="status-box"></div>
+  <div id="statusBox" class="status-box" style="display:none;"></div>
 
-  <!-- 4. Share on Farcaster (always visible) -->
+  <!-- 3. Share -->
   <button id="shareBtn">Share on Farcaster</button>
 
-  <!-- Footer -->
+  <!-- 4. Footer -->
   <footer>
     <a href="https://farcaster.xyz/pratiksharma.eth" target="_blank" aria-label="Farcaster">
-      <!-- Farcaster icon -->
-      <svg viewBox="0 0 24 24"><path fill="white" d="M18.24 0.24H5.76C2.5789 0.24 0 2.8188 0 6v12c0 3.1811 ..."/></svg>
+      <svg viewBox="0 0 24 24"><path d="M18.24 0.24H5.76C2.5789 ..."/></svg>
     </a>
     <a href="https://x.com/Pratiksharma95" target="_blank" aria-label="X">
-      <!-- X icon -->
-      <svg viewBox="0 0 24 24"><path fill="white" d="M1.5 0L9 10.125 ..."/></svg>
+      <svg viewBox="0 0 24 24"><path d="M1.5 0L9 10.125 ..."/></svg>
     </a>
   </footer>
 
@@ -154,92 +106,70 @@
     sdk.actions.ready({ disableNativeGestures: true });
   </script>
 
-  <!-- Wagmi + Farcaster MiniApp Logic -->
+  <!-- Wagmi Integration -->
   <script type="module">
-    import {
-      createConfig,
-      connect,
-      writeContract,
-      readContract,
-      http
-    } from 'https://esm.sh/@wagmi/core';
+    import { createConfig, connect, writeContract, readContract } from 'https://esm.sh/@wagmi/core';
+    import { http } from 'https://esm.sh/@wagmi/core/transports';
     import { arbitrum } from 'https://esm.sh/@wagmi/core/chains';
     import { farcasterMiniApp } from 'https://esm.sh/@farcaster/miniapp-wagmi-connector';
     import { parseEther } from 'https://esm.sh/viem';
 
-    const statusBox = document.getElementById('statusBox');
-    const supplyBox = document.getElementById('totalSupply');
-    const shareBtn = document.getElementById('shareBtn');
-    let lastTokenId = null;
+    const totalSupplyEl = document.getElementById('totalSupply');
+    const statusBox     = document.getElementById('statusBox');
+    const mintBtn       = document.querySelector('.mint-button');
+    const shareBtn      = document.getElementById('shareBtn');
+    let lastTokenId     = null;
 
-    function setStatus(msg, type='info') {
-      statusBox.className = `status-box status-${type}`;
-      statusBox.innerHTML = msg;
-    }
-
+    // Initialize Wagmi & Farcaster Wallet
     const config = createConfig({
       chains: [arbitrum],
       transports: { [arbitrum.id]: http() }
     });
 
-    // Initialize: connect & fetch totalSupply
     (async () => {
+      await connect(config, { connector: farcasterMiniApp() });
+      const { address, abi } = await fetch('/contract.json').then(r => r.json());
       try {
-        await connect(config, { connector: farcasterMiniApp() });
-        const { address, abi } = await fetch('/contract.json').then(r => r.json());
-        const total = await readContract({
-          address,
-          abi,
-          functionName: 'totalSupply',
-          chainId: arbitrum.id
-        });
-        supplyBox.textContent = `Total Minted: ${total}`;
-      } catch (e) {
-        console.warn('Init error:', e);
-        supplyBox.textContent = 'Total Minted: N/A';
+        const total = await readContract({ address, abi, functionName: 'totalSupply' });
+        totalSupplyEl.textContent = `Total Minted: ${total}`;
+      } catch {
+        totalSupplyEl.textContent = 'Total Minted: N/A';
       }
     })();
 
     // Mint handler
-    document.querySelector('.mint-button').addEventListener('click', async () => {
-      const btn = document.querySelector('.mint-button');
-      btn.disabled = true;
-      btn.innerText = 'Minting…';
+    mintBtn.addEventListener('click', async () => {
+      mintBtn.disabled = true;
+      mintBtn.textContent = 'Minting…';
+      const { address, abi } = await fetch('/contract.json').then(r => r.json());
       try {
-        const { address, abi } = await fetch('/contract.json').then(r => r.json());
         const hash = await writeContract({
           address,
           abi,
           functionName: 'mint',
           args: [],
-          value: parseEther('0'),
-          chainId: arbitrum.id
+          value: parseEther('0')
         });
-        setStatus(
-          `✅ Mint Successful <a href="https://arbiscan.io/tx/${hash}" target="_blank" style="color:#fff;text-decoration:underline">View Tx</a>`,
-          'success'
-        );
-        const total = await readContract({
-          address,
-          abi,
-          functionName: 'totalSupply',
-          chainId: arbitrum.id
-        });
-        supplyBox.textContent = `Total Minted: ${total}`;
+        statusBox.style.display = 'block';
+        statusBox.className = 'status-box status-success';
+        statusBox.innerHTML = `✅ Mint Successful <a href="https://arbiscan.io/tx/${hash}" target="_blank" style="color:#fff;text-decoration:underline">View Tx</a>`;
+        // update supply & lastTokenId
+        const total = await readContract({ address, abi, functionName: 'totalSupply' });
+        totalSupplyEl.textContent = `Total Minted: ${total}`;
         lastTokenId = BigInt(total) - 1n;
       } catch (e) {
-        console.warn('Mint failed:', e);
+        console.error(e);
       } finally {
-        btn.disabled = false;
-        btn.innerText = 'MINT ME';
+        mintBtn.disabled = false;
+        mintBtn.textContent = 'MINT ME';
       }
     });
 
-    // Share handler (always works)
+    // Share handler
     shareBtn.addEventListener('click', () => {
       const msg = lastTokenId !== null
         ? `Minted NFT #${lastTokenId} by @pratiksharma.eth 🎉\nMint yours: https://arb-nft.vercel.app/`
-        : `Mint a free Arbitrum NFT on Farcaster: https://arb-nft.vercel.app/`;
+        : `Free Arbitrum NFT on Farcaster: https://arb-nft.vercel.app/`;
       const text = encodeURIComponent(msg);
       sdk.actions.openWindow({ url: `https://farcaster.xyz/compose?text=${text}` });
     });
