@@ -114,20 +114,17 @@
       connect,
       writeContract,
       http,
-      getGasPrice,
       estimateGas
     } from 'https://esm.sh/@wagmi/core';
-
     import { arbitrum } from 'https://esm.sh/@wagmi/core/chains';
     import { farcasterMiniApp } from 'https://esm.sh/@farcaster/miniapp-wagmi-connector';
     import { parseEther } from 'https://esm.sh/viem';
 
     const statusBox = document.getElementById('statusBox');
-
-    function setStatus(message, type = 'info') {
+    const setStatus = (message, type = 'info') => {
       statusBox.className = `status-box status-${type}`;
-      statusBox.textContent = message;
-    }
+      statusBox.innerHTML = message;
+    };
 
     const config = createConfig({
       chains: [arbitrum],
@@ -142,10 +139,8 @@
         connector: farcasterMiniApp()
       });
       connector = result.connector;
-      console.log('✅ Connected via Farcaster MiniApp');
     } catch (e) {
       console.error('❌ Farcaster connect failed', e);
-      setStatus('❌ Farcaster wallet not found. Are you in Warpcast?', 'error');
     }
 
     const button = document.querySelector('.mint-button');
@@ -157,7 +152,6 @@
 
       try {
         const { address, abi } = await fetch('/contract.json').then(r => r.json());
-        console.log('ℹ️ Using contract:', address);
 
         let gasLimit;
         try {
@@ -166,18 +160,11 @@
             abi,
             functionName: 'mint',
             args: [],
-            value: parseEther('0'),
-            chain: arbitrum,
-            chainId: arbitrum.id
+            value: parseEther('0')
           });
-          console.log('✅ Gas estimated:', gasLimit.toString());
-        } catch (e) {
-          console.warn('⚠️ Gas estimation failed. Using fallback.');
+        } catch {
           gasLimit = 300000n;
         }
-
-        const gasPrice = await getGasPrice(config, { chainId: arbitrum.id });
-        console.log('⛽ Gas price:', gasPrice.toString());
 
         const hash = await writeContract(config, {
           address,
@@ -185,20 +172,16 @@
           functionName: 'mint',
           args: [],
           value: parseEther('0'),
-          chain: arbitrum,
-          chainId: arbitrum.id,
           gas: gasLimit
         });
 
-        console.log('✅ Transaction sent:', hash);
-        setStatus(`✅ Mint successful! View on Arbiscan: https://arbiscan.io/tx/${hash}`, 'success');
+        setStatus(
+          `✅ Mint Successful (<a href="https://arbiscan.io/tx/${hash}" target="_blank" style="color:#fff;text-decoration:underline">View Tx</a>)`,
+          'success'
+        );
       } catch (e) {
-        console.error('❌ Mint error:', e);
-
-        if (e.name === 'UserRejectedRequestError') {
-          setStatus('⚠️ You cancelled the transaction in your wallet.', 'warning');
-        } else {
-          setStatus('❌ Mint failed: ' + e.message, 'error');
+        if (e.name !== 'UserRejectedRequestError') {
+          console.error('❌ Mint error:', e);
         }
       } finally {
         button.disabled = false;
