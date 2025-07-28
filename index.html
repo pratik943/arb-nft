@@ -31,6 +31,7 @@
       align-items: center;
       height: 100vh;
       flex-direction: column;
+      color: white;
     }
 
     .mint-button {
@@ -43,11 +44,34 @@
       border-radius: 8px;
       cursor: pointer;
       transition: background 0.3s;
+      margin-bottom: 20px;
     }
 
     .mint-button:disabled {
       background-color: #888;
       cursor: not-allowed;
+    }
+
+    .status-box {
+      font-size: 1rem;
+      padding: 10px;
+      border-radius: 8px;
+      min-height: 24px;
+      text-align: center;
+      width: 90%;
+      max-width: 320px;
+    }
+
+    .status-success {
+      background: #1d4ed8;
+    }
+
+    .status-error {
+      background: #b91c1c;
+    }
+
+    .status-warning {
+      background: #b45309;
     }
 
     footer {
@@ -66,6 +90,7 @@
 </head>
 <body>
   <button class="mint-button">MINT ME</button>
+  <div class="status-box" id="statusBox"></div>
 
   <footer>
     <a href="https://farcaster.xyz/pratiksharma.eth" target="_blank" aria-label="Farcaster">
@@ -97,6 +122,13 @@
     import { farcasterMiniApp } from 'https://esm.sh/@farcaster/miniapp-wagmi-connector';
     import { parseEther } from 'https://esm.sh/viem';
 
+    const statusBox = document.getElementById('statusBox');
+
+    function setStatus(message, type = 'info') {
+      statusBox.className = `status-box status-${type}`;
+      statusBox.textContent = message;
+    }
+
     const config = createConfig({
       chains: [arbitrum],
       transports: {
@@ -113,14 +145,15 @@
       console.log('✅ Connected via Farcaster MiniApp');
     } catch (e) {
       console.error('❌ Farcaster connect failed', e);
-      alert('Farcaster wallet not found. Are you in Warpcast?');
+      setStatus('❌ Farcaster wallet not found. Are you in Warpcast?', 'error');
     }
 
     const button = document.querySelector('.mint-button');
 
     button.addEventListener('click', async () => {
       button.disabled = true;
-      button.innerText = 'Minting...';
+      button.innerText = 'Minting…';
+      setStatus('⏳ Minting… Please confirm in your wallet.', 'warning');
 
       try {
         const { address, abi } = await fetch('/contract.json').then(r => r.json());
@@ -134,6 +167,7 @@
             functionName: 'mint',
             args: [],
             value: parseEther('0'),
+            chain: arbitrum,
             chainId: arbitrum.id
           });
           console.log('✅ Gas estimated:', gasLimit.toString());
@@ -151,18 +185,20 @@
           functionName: 'mint',
           args: [],
           value: parseEther('0'),
+          chain: arbitrum,
           chainId: arbitrum.id,
           gas: gasLimit
         });
 
-        alert(`✅ Mint successful!\nView on Arbiscan: https://arbiscan.io/tx/${hash}`);
+        console.log('✅ Transaction sent:', hash);
+        setStatus(`✅ Mint successful! View on Arbiscan: https://arbiscan.io/tx/${hash}`, 'success');
       } catch (e) {
         console.error('❌ Mint error:', e);
 
         if (e.name === 'UserRejectedRequestError') {
-          alert('⚠️ You cancelled the transaction in your wallet. Please approve to mint.');
+          setStatus('⚠️ You cancelled the transaction in your wallet.', 'warning');
         } else {
-          alert('❌ Mint failed: ' + e.message);
+          setStatus('❌ Mint failed: ' + e.message, 'error');
         }
       } finally {
         button.disabled = false;
