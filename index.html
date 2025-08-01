@@ -75,14 +75,6 @@
       margin-bottom: 16px;
     }
     .status-success { background: #1d4ed8; }
-    .opensea-embed {
-      width: 100%;
-      max-width: 390px;
-      height: 300px;
-      border: none;
-      border-radius: 12px;
-      margin-top: 16px;
-    }
     footer {
       margin-top: auto;
       display: flex;
@@ -128,13 +120,6 @@
   <button class="mint-button">MINT</button>
   <div id="statusBox" class="status-box"></div>
 
-  <!-- 4. OpenSea FarArb gallery -->
-  <iframe
-    src="https://opensea.io/collection/fararb?embed=true"
-    class="opensea-embed"
-    allowfullscreen
-  ></iframe>
-
   <!-- Footer -->
   <footer>
     <a href="https://farcaster.xyz/pratiksharma.eth" target="_blank" aria-label="Farcaster">
@@ -179,7 +164,7 @@
       transports: { [arbitrum.id]: http() }
     });
 
-    // connect Farcaster wallet
+    // connect Farcaster wallet & fetch totalSupply
     (async () => {
       try {
         await connect(config, { connector: farcasterMiniApp() });
@@ -187,7 +172,6 @@
         console.error('Farcaster connect failed', e);
       }
 
-      // fetch totalSupply
       try {
         const { address, abi } = await fetch('/contract.json').then(r => r.json());
         const total = await readContract(config, {
